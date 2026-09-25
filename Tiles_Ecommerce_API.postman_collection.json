@@ -1,0 +1,1147 @@
+{
+	"info": {
+		"_postman_id": "tiles-ecommerce-api-collection",
+		"name": "Tiles E-Commerce API - Complete Collection",
+		"description": "Complete API collection for testing Tiles E-Commerce Backend\n\n**Base URL:** http://localhost:4000\n\n**How to use:**\n1. Start backend server: `cd backend && npm start`\n2. Import this collection in Postman\n3. Test APIs in this order:\n   - Register User\n   - Login User (saves token automatically)\n   - Test other APIs\n\n**Note:** Some APIs require authentication. Login first to get JWT token.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Authentication & User Management",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    console.log(\"User registered successfully!\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"testuser@example.com\",\n    \"gender\": \"male\",\n    \"password\": \"test12345678\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"register"
+							]
+						},
+						"description": "Register a new user. Returns JWT token.\n\n**Required fields:**\n- name (String)\n- email (String, unique)\n- gender (String)\n- password (String, min 8 chars)"
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    console.log(\"Login successful! Token saved.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"testuser@example.com\",\n    \"password\": \"test12345678\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"login"
+							]
+						},
+						"description": "Login with email and password. Returns JWT token (saved automatically)."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"logout"
+							]
+						},
+						"description": "Logout user (clears JWT cookie)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Profile (Me)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"me"
+							]
+						},
+						"description": "Get logged-in user's profile.\n\n**Auth Required:** Yes"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/update",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"me",
+								"update"
+							]
+						},
+						"description": "Update user profile (name, email).\n\n**Auth Required:** Yes"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Password",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"oldPassword\": \"test12345678\",\n    \"newPassword\": \"newpassword123\",\n    \"confirmPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/password/update",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"password",
+								"update"
+							]
+						},
+						"description": "Change user password.\n\n**Auth Required:** Yes"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"testuser@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/password/forgot",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"password",
+								"forgot"
+							]
+						},
+						"description": "Send password reset email with token."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"password\": \"newpassword123\",\n    \"confirmPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/password/reset/:token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"password",
+								"reset",
+								":token"
+							],
+							"variable": [
+								{
+									"key": "token",
+									"value": "your-reset-token-here"
+								}
+							]
+						},
+						"description": "Reset password using token from email.\n\n**Replace :token** with actual reset token."
+					},
+					"response": []
+				}
+			],
+			"description": "User authentication and profile management APIs"
+		},
+		{
+			"name": "2. Products - Public APIs",
+			"item": [
+				{
+					"name": "Get All Products (with filters)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/products?keyword=tile&page=1&price[gte]=100&price[lte]=5000&category=floor&ratings[gte]=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "keyword",
+									"value": "tile",
+									"description": "Search by product name"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number for pagination"
+								},
+								{
+									"key": "price[gte]",
+									"value": "100",
+									"description": "Minimum price"
+								},
+								{
+									"key": "price[lte]",
+									"value": "5000",
+									"description": "Maximum price"
+								},
+								{
+									"key": "category",
+									"value": "floor",
+									"description": "Filter by category"
+								},
+								{
+									"key": "ratings[gte]",
+									"value": "4",
+									"description": "Minimum rating"
+								}
+							]
+						},
+						"description": "Get all products with optional filters:\n\n**Query params:**\n- keyword: search text\n- page: page number\n- price[gte]: min price\n- price[lte]: max price\n- category: category name\n- ratings[gte]: min rating\n\n**No auth required**"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Products (no filters)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/products/all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"all"
+							]
+						},
+						"description": "Get all products without pagination (for sliders, homepage).\n\n**No auth required**"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Product Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/product/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"product",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "product_id_here",
+									"description": "Product MongoDB _id"
+								}
+							]
+						},
+						"description": "Get single product by ID.\n\n**Replace :id** with actual product ID.\n\n**No auth required**"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Reviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/reviews?productId=:productId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"reviews"
+							],
+							"query": [
+								{
+									"key": "productId",
+									"value": ":productId",
+									"description": "Product ID to get reviews for"
+								}
+							]
+						},
+						"description": "Get all reviews for a product.\n\n**Query param:** productId\n\n**No auth required**"
+					},
+					"response": []
+				}
+			],
+			"description": "Public product APIs (no authentication required)"
+		},
+		{
+			"name": "3. Products - User Actions",
+			"item": [
+				{
+					"name": "Create/Update Product Review",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"productId\": \"product_id_here\",\n    \"rating\": 5,\n    \"comment\": \"Excellent tiles! Great quality and finish.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/review",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"review"
+							]
+						},
+						"description": "Create or update product review.\n\n**Auth Required:** Yes\n\n**Body:**\n- productId: Product MongoDB _id\n- rating: 1-5\n- comment: Review text"
+					},
+					"response": []
+				}
+			],
+			"description": "Product actions requiring user authentication"
+		},
+		{
+			"name": "4. Admin - Product Management",
+			"item": [
+				{
+					"name": "Get All Products (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"products"
+							]
+						},
+						"description": "Get all products for admin management.\n\n**Auth Required:** Yes (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Premium Marble Look Tiles\",\n    \"description\": \"High-quality marble look porcelain tiles perfect for living rooms and bathrooms.\",\n    \"highlights\": [\n        \"Premium quality porcelain\",\n        \"Marble look finish\",\n        \"Easy to clean\",\n        \"Scratch resistant\"\n    ],\n    \"specifications\": [\n        {\n            \"title\": \"Size\",\n            \"description\": \"24x24 inches\"\n        },\n        {\n            \"title\": \"Material\",\n            \"description\": \"Porcelain\"\n        },\n        {\n            \"title\": \"Finish\",\n            \"description\": \"Glossy\"\n        }\n    ],\n    \"price\": 1500,\n    \"cuttedPrice\": 2000,\n    \"images\": [\n        {\n            \"public_id\": \"sample_id_1\",\n            \"url\": \"https://res.cloudinary.com/demo/image/upload/sample.jpg\"\n        }\n    ],\n    \"brand\": {\n        \"name\": \"TileMaster\",\n        \"logo\": {\n            \"public_id\": \"brand_logo_id\",\n            \"url\": \"https://res.cloudinary.com/demo/image/upload/logo.jpg\"\n        }\n    },\n    \"category\": \"floor\",\n    \"stock\": 100,\n    \"warranty\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/product/new",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"product",
+								"new"
+							]
+						},
+						"description": "Create a new product.\n\n**Auth Required:** Yes (Admin only)\n\n**Note:** For image upload via Cloudinary, you'll need to integrate cloudinary upload in controller."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Product Name\",\n    \"price\": 1800,\n    \"stock\": 80,\n    \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/product/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"product",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "product_id_here",
+									"description": "Product MongoDB _id"
+								}
+							]
+						},
+						"description": "Update existing product.\n\n**Auth Required:** Yes (Admin only)\n\n**Replace :id** with actual product ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/product/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"product",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "product_id_here",
+									"description": "Product MongoDB _id"
+								}
+							]
+						},
+						"description": "Delete product by ID.\n\n**Auth Required:** Yes (Admin only)\n\n**Replace :id** with actual product ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product Review (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/reviews?productId=:productId&reviewId=:reviewId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"reviews"
+							],
+							"query": [
+								{
+									"key": "productId",
+									"value": ":productId",
+									"description": "Product ID"
+								},
+								{
+									"key": "reviewId",
+									"value": ":reviewId",
+									"description": "Review ID to delete"
+								}
+							]
+						},
+						"description": "Delete a product review.\n\n**Auth Required:** Yes (Admin only)\n\n**Query params:**\n- productId\n- reviewId"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin product management APIs"
+		},
+		{
+			"name": "5. Orders - User",
+			"item": [
+				{
+					"name": "Create New Order",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"shippingInfo\": {\n        \"address\": \"123 Main Street\",\n        \"city\": \"Mumbai\",\n        \"state\": \"Maharashtra\",\n        \"country\": \"India\",\n        \"pincode\": 400001,\n        \"phoneNo\": 9876543210\n    },\n    \"orderItems\": [\n        {\n            \"name\": \"Premium Marble Tiles\",\n            \"price\": 1500,\n            \"quantity\": 10,\n            \"image\": \"https://example.com/image.jpg\",\n            \"product\": \"product_id_here\"\n        }\n    ],\n    \"paymentInfo\": {\n        \"id\": \"payment_id_123\",\n        \"status\": \"succeeded\"\n    },\n    \"itemsPrice\": 15000,\n    \"taxPrice\": 2700,\n    \"shippingPrice\": 500,\n    \"totalPrice\": 18200\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/order/new",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"order",
+								"new"
+							]
+						},
+						"description": "Create a new order.\n\n**Auth Required:** Yes\n\n**Note:** This is typically called after successful payment."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Orders",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"me"
+							]
+						},
+						"description": "Get all orders for logged-in user.\n\n**Auth Required:** Yes"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Order Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/order/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"order",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "order_id_here",
+									"description": "Order MongoDB _id"
+								}
+							]
+						},
+						"description": "Get single order details by ID.\n\n**Auth Required:** Yes\n\n**Replace :id** with actual order ID."
+					},
+					"response": []
+				}
+			],
+			"description": "User order management APIs"
+		},
+		{
+			"name": "6. Admin - Order Management",
+			"item": [
+				{
+					"name": "Get All Orders (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"orders"
+							]
+						},
+						"description": "Get all orders with total revenue.\n\n**Auth Required:** Yes (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"Shipped\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/order/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"order",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "order_id_here",
+									"description": "Order MongoDB _id"
+								}
+							]
+						},
+						"description": "Update order status.\n\n**Auth Required:** Yes (Admin only)\n\n**Status options:**\n- Processing\n- Shipped\n- Delivered\n\n**Replace :id** with actual order ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Order (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/order/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"order",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "order_id_here",
+									"description": "Order MongoDB _id"
+								}
+							]
+						},
+						"description": "Delete order by ID.\n\n**Auth Required:** Yes (Admin only)\n\n**Replace :id** with actual order ID."
+					},
+					"response": []
+				}
+			],
+			"description": "Admin order management APIs"
+		},
+		{
+			"name": "7. Admin - User Management",
+			"item": [
+				{
+					"name": "Get All Users (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"users"
+							]
+						},
+						"description": "Get all users.\n\n**Auth Required:** Yes (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single User (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User MongoDB _id"
+								}
+							]
+						},
+						"description": "Get single user details.\n\n**Auth Required:** Yes (Admin only)\n\n**Replace :id** with actual user ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Role (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated User Name\",\n    \"email\": \"updated@example.com\",\n    \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User MongoDB _id"
+								}
+							]
+						},
+						"description": "Update user details and role.\n\n**Auth Required:** Yes (Admin only)\n\n**Role options:**\n- user\n- admin\n\n**Replace :id** with actual user ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/user/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"user",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id_here",
+									"description": "User MongoDB _id"
+								}
+							]
+						},
+						"description": "Delete user by ID.\n\n**Auth Required:** Yes (Admin only)\n\n**Replace :id** with actual user ID."
+					},
+					"response": []
+				}
+			],
+			"description": "Admin user management APIs"
+		},
+		{
+			"name": "8. System",
+			"item": [
+				{
+					"name": "API Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Check if API is running and get available endpoints."
+					},
+					"response": []
+				}
+			],
+			"description": "System health and status APIs"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:4000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

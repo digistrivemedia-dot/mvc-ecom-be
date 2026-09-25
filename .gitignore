@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# local env files
+config/config.env
+.env
+*.env
+
+migrate-categories.js
+
+/docs
+docs
+docs/*
