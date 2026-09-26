@@ -14,7 +14,7 @@ cloudinary.config({
 app.get('/', (req, res) => {
     res.status(200).json({
         success: true,
-        message: 'Tiles E-Commerce Backend API is Running! 🚀',
+        message: 'InveztIN Backend API is Running! 🚀',
         version: '1.0.0',
         endpoints: {
             users: '/api/v1/register, /api/v1/login',

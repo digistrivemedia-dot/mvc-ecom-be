@@ -6,7 +6,7 @@
  * 2. Creates a new compound unique index on 'slug' and 'parent'
  * 
  * This allows the same subcategory name to exist under different parent categories
- * For example: "Floor Tiles" can exist under both "Ceramic" and "Porcelain"
+ * For example: "Headphones" can exist under both "Electronics" and "Audio"
  */
 
 const mongoose = require('mongoose');

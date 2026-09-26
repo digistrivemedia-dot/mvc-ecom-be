@@ -141,8 +141,13 @@ exports.newOrder = asyncErrorHandler(async (req, res, next) => {
     let couponData = null;
     let discountAmount = 0;
 
-    // If coupon code is provided, apply it
+    // If coupon code is provided, apply it — customer orders only, investors
+    // don't get order discounts (see couponController.js).
     if (couponCode) {
+        if (req.user.role !== 'user') {
+            return next(new ErrorHandler("Coupons are only applicable for customer orders", 403));
+        }
+
         const Coupon = require('../models/couponModel');
         const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
 

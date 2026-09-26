@@ -1,4 +1,5 @@
 const Transaction = require('../models/transactionModel');
+const Order = require('../models/orderModel');
 const asyncErrorHandler = require('../middlewares/asyncErrorHandler');
 
 // Platform-wide financial summary ---SUPERADMIN
@@ -49,5 +50,68 @@ exports.getTransactionsSummary = asyncErrorHandler(async (req, res, next) => {
         success: true,
         totals,
         breakdown: rows,
+    });
+});
+
+const TRANSACTION_PAYMENT_META = {
+    vendor_earning: { role: 'vendor', label: 'Vendor Earning' },
+    vendor_reversal: { role: 'vendor', label: 'Vendor Reversal' },
+    investor_investment: { role: 'investor', label: 'Investor Investment' },
+    investor_payout: { role: 'investor', label: 'Investor Payout' },
+    investor_reversal: { role: 'investor', label: 'Investor Reversal' },
+};
+
+// Unified feed of every payment that has happened on the platform — customer
+// order payments, vendor earnings/reversals, and investor investments/payouts.
+// Superadmin-only. ---SUPERADMIN
+exports.getAllPayments = asyncErrorHandler(async (req, res, next) => {
+    const [orders, transactions] = await Promise.all([
+        Order.find({})
+            .select('user paymentInfo totalPrice paidAt orderStatus createdAt')
+            .populate('user', 'name email')
+            .sort({ createdAt: -1 }),
+        Transaction.find({ type: { $in: Object.keys(TRANSACTION_PAYMENT_META) } })
+            .select('type user product amount createdAt')
+            .populate('user', 'name email')
+            .populate('product', 'name')
+            .sort({ createdAt: -1 }),
+    ]);
+
+    const customerPayments = orders.map((order) => ({
+        id: `order_${order._id}`,
+        role: 'customer',
+        type: 'order_payment',
+        label: 'Order Payment',
+        userName: order.user?.name || 'Unknown',
+        userEmail: order.user?.email || '',
+        amount: order.totalPrice,
+        reference: order.paymentInfo?.id || '',
+        status: order.orderStatus,
+        date: order.paidAt || order.createdAt,
+    }));
+
+    const transactionPayments = transactions.map((txn) => {
+        const meta = TRANSACTION_PAYMENT_META[txn.type];
+        return {
+            id: `txn_${txn._id}`,
+            role: meta.role,
+            type: txn.type,
+            label: meta.label,
+            userName: txn.user?.name || 'Unknown',
+            userEmail: txn.user?.email || '',
+            amount: txn.amount,
+            reference: txn.product?.name || '',
+            status: null,
+            date: txn.createdAt,
+        };
+    });
+
+    const payments = [...customerPayments, ...transactionPayments]
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.status(200).json({
+        success: true,
+        count: payments.length,
+        payments,
     });
 });

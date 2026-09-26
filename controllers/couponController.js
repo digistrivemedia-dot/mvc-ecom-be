@@ -99,12 +99,18 @@ exports.getCoupon = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-// Validate Coupon - All users
+// Validate Coupon - Customers only (not vendors/investors/admins)
 exports.validateCoupon = asyncErrorHandler(async (req, res, next) => {
     const { code, orderAmount } = req.body;
 
     if (!code || !orderAmount) {
         return next(new ErrorHandler("Please provide coupon code and order amount", 400));
+    }
+
+    // Coupons apply to customer orders only — investors invest capital, they
+    // don't buy products, so a coupon has no meaning on their flow.
+    if (req.user.role !== 'user') {
+        return next(new ErrorHandler("Coupons are only applicable for customer orders", 403));
     }
 
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
@@ -129,12 +135,10 @@ exports.validateCoupon = asyncErrorHandler(async (req, res, next) => {
         );
     }
 
-    // Check if user can use this coupon (only for authenticated users)
-    if (req.user) {
-        const userCheck = coupon.canUserUse(req.user.id);
-        if (!userCheck.canUse) {
-            return next(new ErrorHandler(userCheck.message, 400));
-        }
+    // Check if user can use this coupon
+    const userCheck = coupon.canUserUse(req.user.id);
+    if (!userCheck.canUse) {
+        return next(new ErrorHandler(userCheck.message, 400));
     }
 
     // Calculate discount
@@ -154,12 +158,16 @@ exports.validateCoupon = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-// Apply Coupon - Track usage
+// Apply Coupon - Track usage - Customers only (not vendors/investors/admins)
 exports.applyCoupon = asyncErrorHandler(async (req, res, next) => {
     const { code, orderAmount } = req.body;
 
     if (!code || !orderAmount) {
         return next(new ErrorHandler("Please provide coupon code and order amount", 400));
+    }
+
+    if (req.user.role !== 'user') {
+        return next(new ErrorHandler("Coupons are only applicable for customer orders", 403));
     }
 
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
@@ -184,12 +192,10 @@ exports.applyCoupon = asyncErrorHandler(async (req, res, next) => {
         );
     }
 
-    // Check if user can use this coupon (only for authenticated users)
-    if (req.user) {
-        const userCheck = coupon.canUserUse(req.user.id);
-        if (!userCheck.canUse) {
-            return next(new ErrorHandler(userCheck.message, 400));
-        }
+    // Check if user can use this coupon
+    const userCheck = coupon.canUserUse(req.user.id);
+    if (!userCheck.canUse) {
+        return next(new ErrorHandler(userCheck.message, 400));
     }
 
     // NOTE: Usage count is NOT incremented here

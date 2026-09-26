@@ -11,7 +11,7 @@ exports.createCategory = asyncErrorHandler(async (req, res, next) => {
     }
 
     // Check if category with same name exists within the same parent
-    // This allows "Floor Tiles" to exist under both "Ceramic" and "Porcelain"
+    // This allows "Headphones" to exist under both "Electronics" and "Audio"
     const duplicateQuery = {
         name: { $regex: new RegExp(`^${name}$`, 'i') },
         parent: parent || null  // Check within same parent (or both null for top-level)

@@ -1,7 +1,7 @@
 {
-  "name": "tiles-ecommerce-backend",
+  "name": "inveztin-backend",
   "version": "1.0.0",
-  "description": "Tiles E-Commerce Backend API",
+  "description": "InveztIN Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

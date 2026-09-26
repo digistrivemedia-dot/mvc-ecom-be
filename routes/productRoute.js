@@ -15,8 +15,10 @@ router.route('/admin/product/:id')
     .put(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), updateProduct)
     .delete(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), deleteProduct);
 
+// Pricing touches platform margins/investor payouts — superadmin only.
 router.route('/admin/product/:id/pricing').put(isAuthenticatedUser, authorizeRoles("superadmin"), updateProductPricing);
-router.route('/admin/product/:id/listing-status').put(isAuthenticatedUser, authorizeRoles("superadmin"), updateListingStatus);
+// Approving/rejecting a listing doesn't touch pricing — admin can do this too.
+router.route('/admin/product/:id/listing-status').put(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), updateListingStatus);
 
 // Vendor's own product CRUD — same controllers as admin, gated separately;
 // createProduct/updateProduct branch internally on req.user.role.

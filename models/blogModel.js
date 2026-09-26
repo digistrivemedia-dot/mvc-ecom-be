@@ -35,7 +35,7 @@ const blogSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please select a category'],
         enum: [
-            'Tile Trends',
+            'Product Trends',
             'Installation Tips',
             'Design Ideas',
             'Maintenance Guide',

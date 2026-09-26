@@ -65,7 +65,7 @@ const categorySchema = new mongoose.Schema({
 });
 
 // Compound unique index: slug must be unique within the same parent
-// This allows "floor-tiles" to exist under multiple parent categories
+// This allows "headphones" to exist under multiple parent categories
 categorySchema.index({ slug: 1, parent: 1 }, { unique: true });
 
 

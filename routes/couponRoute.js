@@ -17,8 +17,8 @@ const router = express.Router();
 // Public routes
 router.route('/active').get(getActiveCoupons);
 
-// User routes (authenticated)
-router.route('/validate').post(validateCoupon);
+// User routes (authenticated — coupons are customer-only, see couponController)
+router.route('/validate').post(isAuthenticatedUser, validateCoupon);
 router.route('/apply').post(isAuthenticatedUser, applyCoupon);
 
 // Admin routes

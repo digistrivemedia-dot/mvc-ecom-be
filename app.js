@@ -21,11 +21,8 @@ const cors = require('cors');
 const whitelist = [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://tiles-ecommerce.vercel.app',
-    'https://ecom-fe-xi.vercel.app',
-    'https://ecom-fe-17kf.vercel.app',
-    'https://tilesecommerse.vercel.app',
-    'https://tilesecommerse-*.vercel.app' // Allow all preview deployments
+    'https://mvc-ecom-fe.vercel.app',
+    'https://mvc-ecom-fe-*.vercel.app' // Allow all preview deployments
 ];
 */
 
@@ -51,7 +48,6 @@ const payment = require('./routes/paymentRoute');
 const coupon = require('./routes/couponRoute');
 const category = require('./routes/categoryRoute');
 const blog = require('./routes/blogRoute');
-const enquiry = require('./routes/enquiryRoutes');
 const razorpay = require('./routes/razorpayRoute');
 const slider = require('./routes/sliderRoute');
 const investment = require('./routes/investmentRoute');
@@ -66,7 +62,6 @@ app.use('/api/v1', payment);
 app.use('/api/v1', coupon);
 app.use('/api/v1', category);
 app.use('/api/v1', blog);
-app.use('/api/v1/enquiries', enquiry);
 app.use('/api/v1', razorpay);
 app.use('/api/v1', slider);
 app.use('/api/v1', investment);

@@ -106,6 +106,14 @@ const productSchema = new mongoose.Schema({
         enum: ['draft', 'pending_approval', 'live', 'rejected', 'paused'],
         default: 'draft'
     },
+    // Optional note admin/superadmin leaves when rejecting a listing —
+    // shown to the vendor. Cleared whenever the status changes away from
+    // 'rejected'.
+    rejectionNote: {
+        type: String,
+        maxLength: [500, "Rejection note cannot exceed 500 characters"],
+        default: null
+    },
     // When true (default), price/investorPrice/investorPayout auto-follow
     // the global markup settings (see platformSettingsModel.js) and get
     // recalculated whenever those settings or vendorPrice change. Superadmin
@@ -151,15 +159,7 @@ const productSchema = new mongoose.Schema({
         index: true
     },
 
-    // FIX: Removed dimensions object - using 'size' field instead for consistency with frontend
-    // The frontend sends size as a simple string like "24x24" or "1200x600mm"
     size: {
-        type: String,
-        required: false,
-        trim: true
-    },
-
-    unit: {
         type: String,
         required: false,
         trim: true
@@ -182,61 +182,6 @@ const productSchema = new mongoose.Schema({
         required: false,
         trim: true
     },
-
-    thickness: {
-        type: Number, // in mm
-        required: false,
-        min: [0, "Thickness cannot be negative"]
-    },
-
-    coverage: {
-        type: Number, // sq ft per box
-        required: false,
-        min: [0, "Coverage cannot be negative"]
-    },
-
-    tilesPerBox: {
-        type: Number,
-        required: false,
-        min: [0, "Tiles per box cannot be negative"]
-    },
-
-    pricePerSqft: {
-        type: Number,
-        required: false,
-        min: [0, "Price per sq.ft cannot be negative"]
-    },
-
-    weight: {
-        type: Number, // kg per box
-        required: false,
-        min: [0, "Weight cannot be negative"]
-    },
-
-    waterAbsorption: {
-        type: String, // e.g., '<0.5%', '0.5-3%', '>10%'
-        required: false,
-        trim: true
-    },
-
-    slipResistance: {
-        type: String, // e.g., 'R9', 'R10', 'R11', 'R12', 'R13'
-        enum: ['R9', 'R10', 'R11', 'R12', 'R13', 'Not Rated', ''],
-        required: false
-    },
-
-    bulkPricing: [{
-        minQty: {
-            type: Number,
-            required: true,
-            min: [1, "Minimum quantity must be at least 1"]
-        },
-        price: {
-            type: Number,
-            required: true,
-            min: [0, "Price cannot be negative"]
-        }
-    }],
 
     // FIX: Tags array to store both quality tags and room type tags from frontend
     tags: [{
@@ -272,11 +217,6 @@ const productSchema = new mongoose.Schema({
             trim: true
         },
         material: {
-            type: String,
-            required: false,
-            trim: true
-        },
-        unit: {
             type: String,
             required: false,
             trim: true
@@ -386,8 +326,6 @@ productSchema.index({ ratings: -1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ name: 'text', description: 'text' }); // Text search
 productSchema.index({ tags: 1 });
-productSchema.index({ material: 1 });
-productSchema.index({ finish: 1 });
 
 // Virtual for discount percentage
 productSchema.virtual('discountPercentage').get(function () {

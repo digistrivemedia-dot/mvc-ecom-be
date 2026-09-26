@@ -191,10 +191,11 @@ exports.createProduct = asyncErrorHandler(async (req, res, next) => {
 
     if (req.user.role === 'vendor') {
         // Vendor supplies vendorPrice + catalog info only. Customer/investor
-        // pricing auto-computes from the global markup settings and the
-        // listing publishes immediately — no manual per-product approval
-        // step. Superadmin can still override any specific product's
-        // pricing later via the pricing panel (see updateProductPricing).
+        // pricing auto-computes from the global markup settings as a
+        // starting point, but the listing stays pending until admin/
+        // superadmin approves it — it never publishes automatically.
+        // Superadmin can still override the computed pricing later via the
+        // pricing panel (see updateProductPricing).
         stripSuperadminOnlyFields(req.body);
 
         const vendorPrice = Number(req.body.vendorPrice) || 0;
@@ -206,7 +207,7 @@ exports.createProduct = asyncErrorHandler(async (req, res, next) => {
             req.body.investorPayout = investorPayout;
         }
         req.body.pricingStatus = vendorPrice > 0 ? 'priced' : 'pending_pricing';
-        req.body.listingStatus = vendorPrice > 0 ? 'live' : 'draft';
+        req.body.listingStatus = vendorPrice > 0 ? 'pending_approval' : 'draft';
         req.body.useGlobalPricing = true;
     } else {
         // Admin/superadmin creating directly — publish immediately, same as
@@ -268,19 +269,6 @@ exports.createProduct = asyncErrorHandler(async (req, res, next) => {
         req.body.variants = processedVariants;
     }
 
-    // Handle tiles-specific fields
-    if (req.body.dimensions) {
-        req.body.dimensions = JSON.parse(req.body.dimensions);
-    }
-
-    if (req.body.roomType && typeof req.body.roomType === 'string') {
-        req.body.roomType = JSON.parse(req.body.roomType);
-    }
-
-    if (req.body.bulkPricing && typeof req.body.bulkPricing === 'string') {
-        req.body.bulkPricing = JSON.parse(req.body.bulkPricing);
-    }
-
     const product = await Product.create(req.body);
 
     res.status(201).json({
@@ -324,8 +312,12 @@ exports.updateProduct = asyncErrorHandler(async (req, res, next) => {
             req.body.investorPrice = investorPrice;
             req.body.investorPayout = investorPayout;
             req.body.pricingStatus = 'priced';
-            if (product.listingStatus === 'draft' || product.listingStatus === 'pending_approval') {
-                req.body.listingStatus = 'live';
+            // Still awaiting first approval, or vendor is resubmitting after a
+            // rejection — send it back into the approval queue rather than
+            // publishing it directly. Never touches an already-live/paused listing.
+            if (['draft', 'pending_approval', 'rejected'].includes(product.listingStatus)) {
+                req.body.listingStatus = 'pending_approval';
+                req.body.rejectionNote = null;
             }
         }
     }
@@ -417,19 +409,6 @@ exports.updateProduct = asyncErrorHandler(async (req, res, next) => {
         req.body.careInstructions = req.body.careInstructions.map(c =>
             typeof c === 'string' ? JSON.parse(c) : c
         );
-    }
-
-    // Handle tiles-specific fields
-    if (req.body.dimensions && typeof req.body.dimensions === 'string') {
-        req.body.dimensions = JSON.parse(req.body.dimensions);
-    }
-
-    if (req.body.roomType && typeof req.body.roomType === 'string') {
-        req.body.roomType = JSON.parse(req.body.roomType);
-    }
-
-    if (req.body.bulkPricing && typeof req.body.bulkPricing === 'string') {
-        req.body.bulkPricing = JSON.parse(req.body.bulkPricing);
     }
 
     // Handle tags (if it's a string, convert to array)
@@ -584,7 +563,7 @@ exports.updateListingStatus = asyncErrorHandler(async (req, res, next) => {
         return next(new ErrorHandler("Product Not Found", 404));
     }
 
-    const { listingStatus } = req.body;
+    const { listingStatus, rejectionNote } = req.body;
     const validStatuses = ['draft', 'pending_approval', 'live', 'rejected', 'paused'];
 
     if (!validStatuses.includes(listingStatus)) {
@@ -596,6 +575,9 @@ exports.updateListingStatus = asyncErrorHandler(async (req, res, next) => {
     }
 
     product.listingStatus = listingStatus;
+    // Rejection note only makes sense attached to a rejection — clear it the
+    // moment the status moves anywhere else so it can't linger stale.
+    product.rejectionNote = listingStatus === 'rejected' ? (rejectionNote || null) : null;
     await product.save({ validateBeforeSave: false });
 
     res.status(200).json({
