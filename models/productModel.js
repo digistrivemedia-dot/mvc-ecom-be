@@ -50,9 +50,10 @@ const productSchema = new mongoose.Schema({
             }
         }
     ],
-    // Customer-facing retail price. Not required at the schema level because
-    // vendor-submitted products are created without it — superadmin sets it
-    // via the pricing endpoint before the listing can go live (pricingStatus).
+    // Customer-facing retail price, and the one number every other price on
+    // this product is derived from: the vendor lists at this price and the
+    // customer pays exactly it. Not required at the schema level because a
+    // vendor can save a draft before naming a price (pricingStatus).
     price: {
         type: Number,
         required: false,
@@ -66,30 +67,42 @@ const productSchema = new mongoose.Schema({
 
     // --- Marketplace pricing/listing (see MARKETPLACE_CONVERSION_PLAN.md) ---
 
-    // Vendor's cost price, set by the vendor at creation.
+    // What the vendor RECEIVES per unit sold — derived, never typed in:
+    // price / (1 + marginPct/100). The remainder is the platform's margin.
     vendorPrice: {
         type: Number,
         required: false,
         min: [0, "Vendor price cannot be negative"]
     },
-    // Amount an investor pays to fund one unit. Set by superadmin only.
+    // Amount an investor pays to fund one unit. Derived — equal to
+    // vendorPrice, i.e. an investor fronts exactly the vendor's cut.
     investorPrice: {
         type: Number,
         required: false,
         min: [0, "Investor price cannot be negative"]
     },
-    // Fixed amount an investor receives back when their funded unit sells.
-    // Set by superadmin only.
+    // Amount an investor receives when their funded unit sells. Derived —
+    // equal to `price`, so their return is always exactly marginPct.
     investorPayout: {
         type: Number,
         required: false,
         min: [0, "Investor payout cannot be negative"]
     },
-    // How many units of stock can ever be investor-funded. Defaults to
-    // `stock` on creation (see pre-save hook below); superadmin may lower it.
+    // Cap on how many units may ever be investor-funded. Null (the default)
+    // means "however many are in stock", and every read resolves it as
+    // `investableUnits ?? stock`.
+    //
+    // This used to be frozen to the stock count by a pre-save hook at
+    // creation. That silently broke as soon as a vendor restocked: a product
+    // created with 3 units kept a cap of 3 after stock went to 10, so once
+    // 3 units were funded it showed 0 remaining and vanished from the
+    // investor listing (which defaults to hiding fully-funded products) while
+    // still appearing for customers. Leaving it null lets the cap track stock
+    // on its own; superadmin can still set a number here to cap it lower.
     investableUnits: {
         type: Number,
         required: false,
+        default: null,
         min: [0, "Investable units cannot be negative"]
     },
     // Whether superadmin has set price/investorPrice/investorPayout yet.
@@ -114,14 +127,21 @@ const productSchema = new mongoose.Schema({
         maxLength: [500, "Rejection note cannot exceed 500 characters"],
         default: null
     },
-    // When true (default), price/investorPrice/investorPayout auto-follow
-    // the global markup settings (see platformSettingsModel.js) and get
-    // recalculated whenever those settings or vendorPrice change. Superadmin
-    // manually editing this product's price via the pricing panel flips this
-    // to false, so it stops moving when the global % changes later.
-    useGlobalPricing: {
-        type: Boolean,
-        default: true,
+    // Per-product margin override, superadmin-only. Null (the default) means
+    // "follow the global margin" — see platformSettingsModel.js.
+    //
+    // This stores the product's OWN margin rather than a flag that excludes it
+    // from recalculation. That distinction matters: an opted-out product would
+    // keep a stale vendorPrice forever once the global margin moved, and quietly
+    // pay its vendor the wrong amount. Here every recalculation still visits
+    // every product, it just resolves which margin applies (resolveMarginPct in
+    // utils/pricingCalculator.js), so an overridden product is recomputed to the
+    // same numbers instead of being skipped.
+    marginPct: {
+        type: Number,
+        required: false,
+        default: null,
+        min: [0, "Margin cannot be negative"]
     },
     images: [
         {
@@ -338,14 +358,6 @@ productSchema.virtual('discountPercentage').get(function () {
 // Pre-save middleware to update updatedAt
 productSchema.pre('save', function (next) {
     this.updatedAt = Date.now();
-    next();
-});
-
-// Default investableUnits to the initial stock count if not explicitly set.
-productSchema.pre('save', function (next) {
-    if (this.isNew && (this.investableUnits === undefined || this.investableUnits === null)) {
-        this.investableUnits = this.stock;
-    }
     next();
 });
 

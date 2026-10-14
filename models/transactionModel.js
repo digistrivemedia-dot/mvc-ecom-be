@@ -10,6 +10,7 @@ const transactionSchema = new mongoose.Schema({
         type: String,
         enum: [
             'investor_investment',  // investor places capital on a product unit
+            'investor_refund',      // part of an investment repaid after a price drop
             'vendor_earning',       // vendor paid their cost on a unit sold
             'investor_payout',      // investor paid out on their matched unit selling
             'superadmin_profit',    // platform's margin on a unit sold

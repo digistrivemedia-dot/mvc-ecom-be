@@ -33,6 +33,7 @@ exports.getTransactionsSummary = asyncErrorHandler(async (req, res, next) => {
                 totals.vendorPayouts += row.total;
                 break;
             case 'investor_investment':
+            case 'investor_refund':
                 totals.investorInvested += row.total;
                 break;
             case 'investor_payout':
@@ -57,6 +58,7 @@ const TRANSACTION_PAYMENT_META = {
     vendor_earning: { role: 'vendor', label: 'Vendor Earning' },
     vendor_reversal: { role: 'vendor', label: 'Vendor Reversal' },
     investor_investment: { role: 'investor', label: 'Investor Investment' },
+    investor_refund: { role: 'investor', label: 'Investor Refund (price drop)' },
     investor_payout: { role: 'investor', label: 'Investor Payout' },
     investor_reversal: { role: 'investor', label: 'Investor Reversal' },
 };

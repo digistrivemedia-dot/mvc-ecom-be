@@ -14,18 +14,27 @@ const investmentSchema = new mongoose.Schema({
         ref: "Product",
         required: true
     },
-    // Snapshot of product.investorPrice at invest time — the ledger stays
-    // correct even if superadmin changes the product's pricing later.
+    // product.investorPrice as of invest time. Rewritten downward (with the
+    // difference refunded) if the vendor drops the price before this unit
+    // sells — see utils/repriceInvestments.js. A price rise never touches it.
     amountInvested: {
         type: Number,
         required: true,
         min: [0, "Amount invested cannot be negative"]
     },
-    // Snapshot of product.investorPayout at invest time.
+    // product.investorPayout as of invest time, repriced alongside
+    // amountInvested on a price drop.
     expectedPayout: {
         type: Number,
         required: true,
         min: [0, "Expected payout cannot be negative"]
+    },
+    // Set when a price-drop refund was owed but the Razorpay call failed (or
+    // there was no payment to refund against). The offsetting ledger row is
+    // written regardless, so this flags money the platform still owes.
+    refundFailed: {
+        type: Boolean,
+        default: false
     },
     status: {
         type: String,

@@ -1,10 +1,9 @@
-const crypto = require('crypto');
 const Investment = require('../models/investmentModel');
 const Transaction = require('../models/transactionModel');
 const Product = require('../models/productModel');
 const asyncErrorHandler = require('../middlewares/asyncErrorHandler');
 const ErrorHandler = require('../utils/errorHandler');
-const { getRazorpayInstance } = require('../utils/razorpayInstance');
+const { getRazorpayInstance, verifyPaymentSignature } = require('../utils/razorpayInstance');
 const { mergeInvestItems } = require('../utils/investmentBatch');
 
 // Place a batch of investments ---INVESTOR
@@ -34,13 +33,10 @@ exports.invest = asyncErrorHandler(async (req, res, next) => {
         return next(new ErrorHandler("Invalid item in investment cart", 400));
     }
 
-    const sign = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSign = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(sign)
-        .digest('hex');
-
-    if (expectedSign !== razorpay_signature) {
+    // Re-verified here on purpose — never trust the client's claim that
+    // /payment/razorpay/verify already ran. In mock mode this accepts a mock
+    // payment id and nothing else (see utils/razorpayInstance.js).
+    if (!verifyPaymentSignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
         return next(new ErrorHandler("Payment verification failed! Invalid signature", 400));
     }
 
@@ -88,8 +84,12 @@ exports.invest = asyncErrorHandler(async (req, res, next) => {
         validatedLines.push({ product, quantity });
     }
 
-    const paidAmount = payment.amount / 100;
-    if (paidAmount !== expectedTotal) {
+    // Compare in paise, as integers. Investor prices are listingPrice/(1+margin)
+    // and so are usually fractional, which means summing them across a cart
+    // lands on values like 29.159999999999997 while the gateway reports a clean
+    // 2916 paise. A float `!==` here rejects a perfectly correct payment that
+    // the investor has already been charged for.
+    if (Math.round(expectedTotal * 100) !== payment.amount) {
         return next(new ErrorHandler("Payment amount does not match the investment total", 400));
     }
 
@@ -121,17 +121,63 @@ exports.invest = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-// Get logged-in investor's own investments
+// Get logged-in investor's own investments, with the cash that actually moved
+// on each one attached.
+//
+// `amountInvested` alone can't answer "what did this unit do for me": it's
+// rewritten in place when a price drop refunds part of the capital (see
+// utils/repriceInvestments.js), and a cancelled order reverses a payout that
+// was already booked. Both of those live in the ledger, so the per-unit
+// history is summed from there rather than inferred from the current snapshot.
 exports.myInvestments = asyncErrorHandler(async (req, res, next) => {
 
     const investments = await Investment.find({ investor: req.user.id })
         .sort({ createdAt: -1 })
-        .populate('product', 'name images price investorPrice investorPayout')
+        .populate('product', 'name images price investorPrice investorPayout listingStatus')
         .populate('matchedOrder', 'orderStatus createdAt');
+
+    const ledger = await Transaction.aggregate([
+        {
+            $match: {
+                user: req.user._id,
+                investment: { $ne: null },
+                type: { $in: ['investor_refund', 'investor_payout', 'investor_reversal'] },
+            },
+        },
+        { $group: { _id: { investment: '$investment', type: '$type' }, total: { $sum: '$amount' } } },
+    ]);
+
+    const byInvestment = new Map();
+    for (const row of ledger) {
+        const key = String(row._id.investment);
+        const entry = byInvestment.get(key) || { refunded: 0, realisedPayout: 0 };
+        if (row._id.type === 'investor_refund') {
+            // Stored negative (money leaving the investor's invested balance).
+            entry.refunded += -row.total;
+        } else {
+            // payout is positive, reversal is negative — they net out when an
+            // order is cancelled, which is exactly what "realised" should mean.
+            entry.realisedPayout += row.total;
+        }
+        byInvestment.set(key, entry);
+    }
+
+    const enriched = investments.map((investment) => {
+        const history = byInvestment.get(String(investment._id)) || { refunded: 0, realisedPayout: 0 };
+        return {
+            ...investment.toObject(),
+            // Capital handed back because the product's price dropped after
+            // this unit was funded.
+            refundedTotal: Number(history.refunded.toFixed(2)),
+            // What this unit has actually paid out so far — 0 while unmatched,
+            // and back to 0 if its order was later cancelled.
+            realisedPayout: Number(history.realisedPayout.toFixed(2)),
+        };
+    });
 
     res.status(200).json({
         success: true,
-        investments,
+        investments: enriched,
     });
 });
 
@@ -150,8 +196,9 @@ exports.myEarnings = asyncErrorHandler(async (req, res, next) => {
 
     for (const row of rows) {
         if (row._id === 'investor_investment') totals.totalInvested += row.total;
+        if (row._id === 'investor_refund') totals.totalInvested += row.total;   // negative, nets out
         if (row._id === 'investor_payout') totals.totalPaidOut += row.total;
-        if (row._id === 'investor_reversal') totals.totalPaidOut += row.total; // negative, nets out
+        if (row._id === 'investor_reversal') totals.totalPaidOut += row.total;  // negative, nets out
     }
 
     res.status(200).json({

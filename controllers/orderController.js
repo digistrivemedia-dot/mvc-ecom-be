@@ -5,6 +5,8 @@ const Investment = require('../models/investmentModel');
 const Transaction = require('../models/transactionModel');
 const ErrorHandler = require('../utils/errorHandler');
 const sendEmail = require('../utils/sendEmail');
+const { calculateUnitProfit } = require('../utils/pricingCalculator');
+const { repriceInvestments } = require('../utils/repriceInvestments');
 
 // type -> reversal type, for undoing a sale's settlement on cancellation.
 // investor_investment is intentionally excluded: an investor's principal is
@@ -67,15 +69,22 @@ async function settleOrder(order) {
                     product: product._id,
                     order: order._id,
                     investment: matchedInvestment._id,
-                    amount: customerPricePerUnit + matchedInvestment.amountInvested
-                        - (hasVendorEarning ? vendorPrice : 0) - matchedInvestment.expectedPayout,
+                    amount: calculateUnitProfit({
+                        customerPrice: customerPricePerUnit,
+                        vendorPrice: hasVendorEarning ? vendorPrice : 0,
+                        amountInvested: matchedInvestment.amountInvested,
+                        expectedPayout: matchedInvestment.expectedPayout,
+                    }),
                 });
             } else {
                 txns.push({
                     type: 'superadmin_profit',
                     product: product._id,
                     order: order._id,
-                    amount: customerPricePerUnit - (hasVendorEarning ? vendorPrice : 0),
+                    amount: calculateUnitProfit({
+                        customerPrice: customerPricePerUnit,
+                        vendorPrice: hasVendorEarning ? vendorPrice : 0,
+                    }),
                 });
             }
 
@@ -117,6 +126,16 @@ async function reverseSettlement(order) {
                 { _id: { $in: item.matchedInvestments } },
                 { status: 'unmatched', matchedOrder: null, matchedAt: null }
             );
+
+            // These investments were frozen at whatever the price was when they
+            // were made, and repriceInvestments deliberately skips matched ones.
+            // Re-pooling them makes them live again, so they have to be brought
+            // up to today's terms here — otherwise an investment made at 120 that
+            // got matched, then cancelled after the vendor dropped to 90, would
+            // sit unmatched owing its holder a 120 payout on a 90 product and the
+            // platform would settle the next sale of it at a loss.
+            const product = await Product.findById(item.product);
+            if (product) await repriceInvestments(product);
         }
     }
 }

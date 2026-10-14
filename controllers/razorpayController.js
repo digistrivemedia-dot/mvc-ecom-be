@@ -1,8 +1,12 @@
-const crypto = require('crypto');
 const asyncErrorHandler = require('../middlewares/asyncErrorHandler');
 const ErrorHandler = require('../utils/errorHandler');
 const Order = require('../models/orderModel');
-const { getRazorpayInstance } = require('../utils/razorpayInstance');
+const {
+    getRazorpayInstance,
+    isPaymentsMocked,
+    mockPaymentIdFor,
+    verifyPaymentSignature,
+} = require('../utils/razorpayInstance');
 
 // Create Razorpay Order
 // This is called BEFORE user makes payment
@@ -44,6 +48,19 @@ exports.createRazorpayOrder = asyncErrorHandler(async (req, res, next) => {
             success: true,
             order: razorpayOrder,
             key_id: process.env.RAZORPAY_KEY_ID, // Send key to frontend
+            // In mock mode the client skips the Razorpay modal entirely and
+            // echoes this proof straight back, so the rest of the flow
+            // (verify → settle) runs exactly as it does with a real payment.
+            ...(isPaymentsMocked()
+                ? {
+                    mock: true,
+                    mockPayment: {
+                        razorpay_order_id: razorpayOrder.id,
+                        razorpay_payment_id: mockPaymentIdFor(amountInPaise),
+                        razorpay_signature: 'mock_signature',
+                    },
+                }
+                : {}),
         });
     } catch (error) {
         console.error('Razorpay Order Creation Error:', error);
@@ -69,19 +86,7 @@ exports.verifyRazorpayPayment = asyncErrorHandler(async (req, res, next) => {
     try {
         const razorpayInstance = getRazorpayInstance();
 
-        // Create signature verification string
-        const sign = razorpay_order_id + '|' + razorpay_payment_id;
-
-        // Generate expected signature using HMAC SHA256
-        const expectedSign = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(sign.toString())
-            .digest('hex');
-
-        // Compare signatures
-        const isAuthentic = expectedSign === razorpay_signature;
-
-        if (!isAuthentic) {
+        if (!verifyPaymentSignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature })) {
             return next(new ErrorHandler('Payment verification failed! Invalid signature', 400));
         }
 
